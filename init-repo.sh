@@ -23,7 +23,7 @@ git init
 git branch -M main
 
 echo "==> Adding remote"
-git remote add origin git@github.com:bforejt/FalconTerm.git
+git remote add origin https://github.com/bforejt/FalconTerm.git
 
 echo "==> Initial commit"
 git add -A
