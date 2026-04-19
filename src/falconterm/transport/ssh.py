@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import socket
 from collections.abc import Awaitable, Callable
 
 import asyncssh
@@ -63,14 +64,17 @@ class SSHTransport(Transport):
         known_hosts = known_hosts_path if os.path.exists(known_hosts_path) else None
         agent_path: object = () if self._use_agent else None
 
+        family = await self._pick_address_family(loop)
+
         log.info(
-            "SSH connect: host=%r port=%d user=%r auth=%s key=%r known_hosts=%r",
+            "SSH connect: host=%r port=%d user=%r auth=%s key=%r known_hosts=%r family=%s",
             self._host,
             self._port,
             self._username,
             "agent" if self._use_agent else ("key" if self._key_path else "password"),
             self._key_path,
             known_hosts,
+            _family_name(family),
         )
 
         try:
@@ -82,6 +86,7 @@ class SSHTransport(Transport):
                 client_keys=client_keys,
                 agent_path=agent_path,
                 known_hosts=known_hosts,
+                family=family,
             )
         except asyncssh.HostKeyNotVerifiable as e:
             log.info("host key not in known_hosts for %s: %s", self._host, e)
@@ -99,6 +104,7 @@ class SSHTransport(Transport):
                 client_keys=client_keys,
                 agent_path=agent_path,
                 known_hosts=None,
+                family=family,
             )
         except OSError as e:
             log.warning(
@@ -166,6 +172,49 @@ class SSHTransport(Transport):
                 self._chan.change_terminal_size(cols, rows)
             except Exception:
                 pass
+
+    async def _pick_address_family(self, loop: asyncio.AbstractEventLoop) -> int:
+        """Return an address-family hint for asyncssh.connect.
+
+        Workaround for a macOS / Python 3.13 bug: asyncio.create_connection
+        calls ``setsockopt(TCP_NODELAY)`` on the socket *before* connect(),
+        and that call returns ``EINVAL`` for link-local IPv6 sockets. Bonjour
+        / mDNS ``.local`` hostnames commonly resolve to link-local v6.
+
+        Strategy: resolve the host ourselves. If the address list contains
+        any link-local IPv6 AND IPv4 is available, force AF_INET — the
+        link-local entry is usually first in the list and asyncio won't fall
+        through to a later v6 or v4 entry after setsockopt fails. Pure-v6
+        hosts without v4 still go through AF_UNSPEC so global-v6 works.
+        """
+        try:
+            infos = await loop.getaddrinfo(
+                self._host, self._port, type=socket.SOCK_STREAM
+            )
+        except socket.gaierror:
+            return socket.AF_UNSPEC  # let asyncssh report the DNS error
+
+        has_v4 = any(f == socket.AF_INET for f, *_ in infos)
+        has_linklocal_v6 = any(
+            f == socket.AF_INET6 and len(sa) >= 4 and sa[3] != 0
+            for f, _, _, _, sa in infos
+        )
+
+        if has_linklocal_v6 and has_v4:
+            log.info(
+                "resolved addresses include link-local IPv6; forcing AF_INET "
+                "to avoid macOS / Py3.13 TCP_NODELAY EINVAL on link-local sockets"
+            )
+            return socket.AF_INET
+        return socket.AF_UNSPEC
+
+
+def _family_name(family: int) -> str:
+    return {
+        socket.AF_UNSPEC: "AF_UNSPEC",
+        socket.AF_INET: "AF_INET (v4 only)",
+        socket.AF_INET6: "AF_INET6 (v6 only)",
+    }.get(family, str(family))
 
 
 class _ShellSession(asyncssh.SSHClientSession):  # type: ignore[misc]
