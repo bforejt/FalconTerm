@@ -19,6 +19,11 @@ from PySide6.QtWidgets import QApplication
 
 def run(argv: list[str]) -> int:
     """Start the Qt application under a qasync event loop."""
+    # Configure logging FIRST so any subsequent init failures get recorded.
+    from falconterm.utils.logging_setup import configure as _configure_logging
+
+    _configure_logging()
+
     app = QApplication(argv)
     app.setApplicationName("FalconTerm")
     app.setApplicationDisplayName("FalconTerm")

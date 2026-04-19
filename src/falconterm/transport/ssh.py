@@ -60,39 +60,61 @@ class SSHTransport(Transport):
         client_keys: list[str] | None = [self._key_path] if self._key_path else None
 
         known_hosts_path = os.path.expanduser("~/.ssh/known_hosts")
+        known_hosts = known_hosts_path if os.path.exists(known_hosts_path) else None
+        agent_path: object = () if self._use_agent else None
+
+        log.info(
+            "SSH connect: host=%r port=%d user=%r auth=%s key=%r known_hosts=%r",
+            self._host,
+            self._port,
+            self._username,
+            "agent" if self._use_agent else ("key" if self._key_path else "password"),
+            self._key_path,
+            known_hosts,
+        )
+
         try:
-            # Try default known_hosts first.
             self._conn = await asyncssh.connect(
                 host=self._host,
                 port=self._port,
                 username=self._username,
                 password=self._password,
                 client_keys=client_keys,
-                agent_path=None if not self._use_agent else (),
-                known_hosts=known_hosts_path if os.path.exists(known_hosts_path) else None,
+                agent_path=agent_path,
+                known_hosts=known_hosts,
             )
         except asyncssh.HostKeyNotVerifiable as e:
-            # Prompt the user via the UI callback.
+            log.info("host key not in known_hosts for %s: %s", self._host, e)
             if self._known_hosts_prompt is None:
                 raise TransportError(f"Host key for {self._host} is not in known_hosts") from e
-            # Extract fingerprint from the exception if possible; otherwise use host.
             accept = await self._known_hosts_prompt(self._host, "ssh-ed25519", str(e))
             if not accept:
                 raise TransportError("User rejected host key") from e
-            # Reconnect with host-key checking disabled. asyncssh will then
-            # add the key to known_hosts via validate_host_key_callback on success.
+            log.info("user accepted host key; reconnecting with known_hosts=None")
             self._conn = await asyncssh.connect(
                 host=self._host,
                 port=self._port,
                 username=self._username,
                 password=self._password,
                 client_keys=client_keys,
-                agent_path=None if not self._use_agent else (),
+                agent_path=agent_path,
                 known_hosts=None,
             )
-        except (OSError, asyncssh.Error) as e:
+        except OSError as e:
+            log.warning(
+                "SSH OSError connecting to %s:%d — errno=%s: %s",
+                self._host,
+                self._port,
+                getattr(e, "errno", "?"),
+                e,
+                exc_info=True,
+            )
+            raise TransportError(f"SSH connection failed: {e}") from e
+        except asyncssh.Error as e:
+            log.warning("asyncssh.Error: %s", e, exc_info=True)
             raise TransportError(f"SSH connection failed: {e}") from e
 
+        log.info("SSH connected; requesting shell PTY (%dx%d)", self._cols, self._rows)
         try:
             self._chan, _session = await self._conn.create_session(
                 _ShellSession,
@@ -101,12 +123,14 @@ class SSHTransport(Transport):
                 request_pty="force",
             )
         except (OSError, asyncssh.Error) as e:
+            log.warning("shell channel request failed: %s", e, exc_info=True)
             await self._close_conn()
             raise TransportError(f"Shell channel request failed: {e}") from e
 
         session = _session  # type: _ShellSession
         session.attach(self)
         self._connected = True
+        log.info("SSH session ready for %s", self._host)
 
     async def disconnect(self) -> None:
         self._connected = False

@@ -99,6 +99,17 @@ step "Installing FalconTerm and dev dependencies"
 info "(this may take a minute — PySide6 is a large wheel)"
 .venv/bin/pip install --disable-pip-version-check -e ".[dev]"
 
+# Python 3.13+ skips .pth files that have macOS UF_HIDDEN set (see cpython site.py).
+# Hatchling's editable install writes `_editable_impl_*.pth` with the hidden flag,
+# which makes the editable install silently invisible on macOS. Strip the flag.
+if [[ "$(uname)" == "Darwin" ]]; then
+    shopt -s nullglob
+    for pth in .venv/lib/python*/site-packages/_editable_impl_*.pth; do
+        chflags nohidden "$pth" 2>/dev/null || true
+    done
+    shopt -u nullglob
+fi
+
 # --- verify ------------------------------------------------------------------
 step "Running test suite"
 if .venv/bin/pytest -q; then

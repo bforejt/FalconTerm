@@ -69,8 +69,13 @@ class SessionTab(QWidget):
 
         self._status_label = QLabel("Connecting…", self)
         self._status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._status_label.setWordWrap(True)
+        self._status_label.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
         self._status_label.setStyleSheet(
-            "background: rgba(20,20,30,0.85); color: #ccc; padding: 6px;"
+            "QLabel { background: rgba(20,20,30,0.92); color: #f0f0f0; "
+            "padding: 10px 14px; font-size: 12px; border-top: 1px solid #444; }"
         )
         self._status_label.setVisible(False)
 
