@@ -80,12 +80,18 @@ class SessionEditDialog(QDialog):
         if self._node.ssh:
             self._ssh_auth.setCurrentText(self._node.ssh.auth.method)
         self._ssh_auth.currentIndexChanged.connect(self._on_auth_change)
-        key_row = QHBoxLayout()
-        self._ssh_key = QLineEdit(self._node.ssh.auth.key_path if self._node.ssh else "", self)
-        browse = QPushButton("Browse…", self)
+        # Wrap the key+browse line in a container QWidget so QFormLayout can
+        # associate it with its label (labelForField only works for widgets).
+        self._ssh_key_row = QWidget(self)
+        _key_layout = QHBoxLayout(self._ssh_key_row)
+        _key_layout.setContentsMargins(0, 0, 0, 0)
+        self._ssh_key = QLineEdit(
+            self._node.ssh.auth.key_path if self._node.ssh else "", self._ssh_key_row
+        )
+        browse = QPushButton("Browse…", self._ssh_key_row)
         browse.clicked.connect(self._browse_key)
-        key_row.addWidget(self._ssh_key, 1)
-        key_row.addWidget(browse)
+        _key_layout.addWidget(self._ssh_key, 1)
+        _key_layout.addWidget(browse)
         self._ssh_password = QLineEdit(self)
         self._ssh_password.setEchoMode(QLineEdit.EchoMode.Password)
         self._ssh_password.setPlaceholderText("(stored in keyring on save)")
@@ -95,7 +101,7 @@ class SessionEditDialog(QDialog):
         ssh_form.addRow("Port", self._ssh_port)
         ssh_form.addRow("Username", self._ssh_user)
         ssh_form.addRow("Auth", self._ssh_auth)
-        ssh_form.addRow("Key path", key_row)
+        ssh_form.addRow("Key path", self._ssh_key_row)
         ssh_form.addRow("Password", self._ssh_password)
         self._ssh_form = ssh_form
         ssh_tab = QWidget(self)
@@ -230,10 +236,15 @@ class SessionEditDialog(QDialog):
 
     def _on_auth_change(self) -> None:
         auth = self._ssh_auth.currentText()
-        self._ssh_form.labelForField(self._ssh_key).setVisible(auth == "key")
-        self._ssh_key.setVisible(auth == "key")
-        self._ssh_form.labelForField(self._ssh_password).setVisible(auth == "password")
-        self._ssh_password.setVisible(auth == "password")
+        self._toggle_row(self._ssh_key_row, auth == "key")
+        self._toggle_row(self._ssh_password, auth == "password")
+
+    def _toggle_row(self, field: QWidget, visible: bool) -> None:
+        """Show/hide a form row's field + its associated label safely."""
+        field.setVisible(visible)
+        label = self._ssh_form.labelForField(field)
+        if label is not None:
+            label.setVisible(visible)
 
     def _mark_font_override(self) -> None:
         # User edited font picker → override from defaults.
