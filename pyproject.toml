@@ -1,0 +1,113 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "falconterm"
+version = "0.1.0"
+description = "Cross-platform GUI terminal with SSH, Telnet, and Serial support, inspired by SecureCRT."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11,<3.14"
+authors = [{ name = "Brian Forejt" }]
+keywords = ["terminal", "ssh", "telnet", "serial", "securecrt", "network-engineering"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: X11 Applications :: Qt",
+    "Environment :: MacOS X",
+    "Environment :: Win32 (MS Windows)",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Terminals :: Terminal Emulators/X Terminals",
+]
+dependencies = [
+    "PySide6>=6.7",
+    "qasync>=0.27",
+    "pyte>=0.8.2",
+    "asyncssh>=2.17",
+    "telnetlib3>=2.0",
+    "pyserial>=3.5",
+    "pyserial-asyncio>=0.6",
+    "keyring>=25.0",
+    "platformdirs>=4.2",
+    "pydantic>=2.7",
+]
+
+[project.scripts]
+falconterm = "falconterm.__main__:main"
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.5",
+    "mypy>=1.10",
+    "pytest>=8.0",
+    "pytest-qt>=4.4",
+    "pytest-asyncio>=0.23",
+]
+
+[project.urls]
+Homepage = "https://github.com/bforejt/FalconTerm"
+Repository = "https://github.com/bforejt/FalconTerm"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/falconterm"]
+
+[tool.hatch.build.targets.wheel.shared-data]
+"resources/color_schemes" = "share/falconterm/color_schemes"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "N",   # pep8-naming
+    "SIM", # flake8-simplify
+    "RUF", # ruff-specific
+]
+ignore = [
+    "E501",   # line-too-long (handled by formatter)
+    "SIM105", # prefer contextlib.suppress — stylistic; try/except/pass is fine
+    "B027",   # abstract method without decorator — Transport.resize intentionally has a default
+    "B008",   # function call as default arg — Qt widgets use this idiom
+    "N802",   # Qt uses camelCase overrides (paintEvent, keyPressEvent)
+]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+disallow_untyped_decorators = false
+
+[[tool.mypy.overrides]]
+module = [
+    "pyte",
+    "pyte.*",
+    "qasync",
+    "serial",
+    "serial_asyncio",
+    "telnetlib3",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+asyncio_mode = "auto"

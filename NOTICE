@@ -1,8 +1,0 @@
-FalconTerm
-Copyright 2026 Brian Forejt
-
-This product includes software developed by:
-- SwiftTerm (https://github.com/migueldeicaza/SwiftTerm) — MIT License
-- SwiftNIO SSH (https://github.com/apple/swift-nio-ssh) — Apache License 2.0
-- SwiftNIO (https://github.com/apple/swift-nio) — Apache License 2.0
-- Swift Argument Parser (https://github.com/apple/swift-argument-parser) — Apache License 2.0
