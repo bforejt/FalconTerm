@@ -25,9 +25,21 @@ A cross-platform GUI terminal inspired by SecureCRT. Built with Python + PySide6
 
 Requires Python 3.11–3.13 (PySide6 6.11 does not yet support Python 3.14).
 
+### Quick start
+
 ```bash
-pip install -e .           # from a clone
-pip install -e .[dev]      # with dev tooling (ruff, mypy, pytest)
+./bootstrap.sh
+```
+
+The script picks a supported Python (prefers `python3.13`), nukes any existing
+`.venv`, creates a fresh one, installs FalconTerm with dev deps, and runs the
+test suite. Pass an explicit interpreter if needed: `./bootstrap.sh python3.12`.
+
+### Manual
+
+```bash
+python3.13 -m venv .venv
+.venv/bin/pip install -e ".[dev]"
 ```
 
 ## Run
