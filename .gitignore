@@ -1,28 +1,50 @@
-# Xcode
-*.xcodeproj/xcuserdata/
-*.xcworkspace/xcuserdata/
-*.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
-DerivedData/
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
 build/
-*.pbxuser
-!default.pbxuser
-*.mode1v3
-!default.mode1v3
-*.mode2v3
-!default.mode2v3
-*.perspectivev3
-!default.perspectivev3
-xcuserdata/
-*.moved-aside
-*.hmap
-*.ipa
-*.dSYM.zip
-*.dSYM
+dist/
+*.egg-info/
+*.egg
+develop-eggs/
+eggs/
+.eggs/
+wheels/
+share/python-wheels/
+MANIFEST
 
-# Swift Package Manager
-.build/
-.swiftpm/
-Package.resolved
+# Virtual envs
+.venv/
+venv/
+env/
+ENV/
+.python-version
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Type checking
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.pytype/
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
 
 # macOS
 .DS_Store
@@ -32,16 +54,11 @@ Package.resolved
 .Spotlight-V100
 .Trashes
 
-# Archives
-*.xcarchive
+# Packaging artifacts
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
 
-# Signing
-*.mobileprovision
-*.provisionprofile
-
-# IDE
-.idea/
-*.swp
-*.swo
-*~
-.vscode/
+# Environment
+.env
+.env.local
